@@ -9,7 +9,7 @@ namespace HidamariBot.Services;
 
 public class SchedulerService : DiscordBotService {
     const ulong CHANNEL_ID = 1203397714935549962;
-    readonly TimeZoneInfo frenchTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Romance Standard Time");
+    static readonly TimeZoneInfo frenchTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Romance Standard Time");
     int lastQuestionDayExecuted;
     int lastMemeDayExecuted;
 
@@ -87,4 +87,6 @@ public class SchedulerService : DiscordBotService {
 
     DateTime GetNextOccurrence() => TimeZoneInfo.ConvertTimeFromUtc(
         new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day + 1, 22, 23, 00), frenchTimeZone);
+
+    public static TimeZoneInfo GetTimeZoneInfo() => frenchTimeZone;
 }

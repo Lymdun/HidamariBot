@@ -61,6 +61,6 @@ public static class Program {
     }
 
     static GatewayIntents GetDiscordIntents() {
-        return (GatewayIntents.Guilds | GatewayIntents.Integrations | GatewayIntents.Members);
+        return (GatewayIntents.Guilds | GatewayIntents.Integrations | GatewayIntents.Members | GatewayIntents.GuildReactions | GatewayIntents.MessageContent);
     }
 }
