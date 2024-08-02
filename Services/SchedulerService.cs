@@ -12,7 +12,7 @@ public class SchedulerService : DiscordBotService {
     const ulong CHANNEL_ID = 1203397714935549962;
     static readonly TimeZoneInfo frenchTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Romance Standard Time");
 
-    const string CRON_EXPRESSION = "30 0 12 * * 1,2";
+    const string CRON_EXPRESSION = "0 12 * * MON,TUE";
 
     protected override ValueTask OnReady(ReadyEventArgs e) {
         Logger.LogInformation("SchedulerService Ready fired!");
