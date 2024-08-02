@@ -9,17 +9,18 @@ namespace HidamariBot.Services;
 
 public class GayboardService : DiscordBotService {
     const ulong CHANNEL_ID = 542701796787879937;
+    const ushort MIN_REACTIONS_REQUIRED = 5;
     static readonly IEmoji DETECTABLE_EMOTE = new LocalEmoji("🏳️‍🌈");
 
     protected override async ValueTask OnReactionAdded(ReactionAddedEventArgs e) {
-        IMessage? message = await Client.FetchMessageAsync(e.ChannelId, e.MessageId);
+        var message = await Client.FetchMessageAsync(e.ChannelId, e.MessageId) as IUserMessage;
         if (message == null)
             return;
 
         if (message.Reactions.TryGetValue(out IReadOnlyDictionary<IEmoji, IMessageReaction>? reactions)) {
-            if (reactions.TryGetValue(DETECTABLE_EMOTE, out IMessageReaction? reaction) && reaction.Count == 5) {
+            if (reactions.TryGetValue(DETECTABLE_EMOTE, out IMessageReaction? reaction) && reaction.Count == MIN_REACTIONS_REQUIRED) {
                 IReadOnlyList<IMessage> oldMessages = await Client.FetchMessagesAsync(CHANNEL_ID, limit: 50);
-                if (oldMessages.Any(x => x.Content.Equals(message.Content) && x.Author.Equals(message.Author))) {
+                if (oldMessages.Any(x => x.Content.Equals(message.Content))) {
                     Logger.LogWarning("Failed to post this gay message as it was already posted");
                     return;
                 }
@@ -37,7 +38,19 @@ public class GayboardService : DiscordBotService {
                     }
                 };
 
-                await Bot.SendMessageAsync(CHANNEL_ID, new LocalMessage().WithEmbeds(embed));
+                if (message.Attachments.Count > 0) {
+                    IAttachment firstAttachment = message.Attachments[0];
+                    if (firstAttachment.ContentType?.StartsWith("image/") == true) {
+                        embed.ImageUrl = firstAttachment.Url;
+                    }
+                }
+
+                var newMessage = new LocalMessage {
+                    Embeds = new List<LocalEmbed> { embed },
+                    Content = $"https://discord.com/channels/{e.GuildId}/{e.ChannelId}/{e.MessageId}"
+                };
+
+                await Bot.SendMessageAsync(CHANNEL_ID, newMessage);
             }
         }
     }
