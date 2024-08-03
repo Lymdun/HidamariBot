@@ -19,6 +19,9 @@ public class AudioPlayerService : DiscordBotService {
     public async Task<IResult> PlayRadio(Snowflake guildId, Snowflake channelId) {
         try {
             VoiceExtension voiceExtension = Bot.GetRequiredExtension<VoiceExtension>();
+
+            await _semaphore.WaitAsync();
+
             IVoiceConnection voiceConnection = await voiceExtension.ConnectAsync(guildId, channelId);
 
             _httpClient = new HttpClient();
@@ -35,6 +38,8 @@ public class AudioPlayerService : DiscordBotService {
         } catch (Exception ex) {
             Logger.LogError(ex, "Error while trying to start the radio");
             return Results.Failure("Une erreur est survenue !");
+        } finally {
+            _semaphore.Release();
         }
     }
 
