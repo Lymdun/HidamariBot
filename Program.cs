@@ -1,7 +1,9 @@
 ﻿using Disqord;
 using Disqord.Bot.Hosting;
 using Disqord.Extensions.Interactivity;
+using Disqord.Extensions.Voice;
 using Disqord.Gateway;
+using HidamariBot.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -57,10 +59,12 @@ public static class Program {
 
     static void ConfigureServices(HostBuilderContext context, IServiceCollection services) {
         services.AddInteractivityExtension();
+        services.AddVoiceExtension();
+        services.AddSingleton<AudioPlayerService>();
         services.AddLogging();
     }
 
     static GatewayIntents GetDiscordIntents() {
-        return (GatewayIntents.Guilds | GatewayIntents.Integrations | GatewayIntents.Members | GatewayIntents.GuildReactions | GatewayIntents.MessageContent);
+        return (GatewayIntents.Guilds | GatewayIntents.Integrations | GatewayIntents.Members | GatewayIntents.GuildReactions | GatewayIntents.MessageContent | GatewayIntents.VoiceStates);
     }
 }
