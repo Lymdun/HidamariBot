@@ -1,5 +1,4 @@
 ﻿using Disqord;
-using Disqord.Bot;
 using Disqord.Bot.Hosting;
 using Disqord.Extensions.Voice;
 using Disqord.Gateway;
@@ -11,8 +10,6 @@ using Qmmands;
 namespace HidamariBot.Services;
 
 public class AudioPlayerService : DiscordBotService {
-    readonly ILogger<AudioPlayerService> _logger;
-    readonly DiscordBot _bot;
     readonly SemaphoreSlim _semaphore = new(1, 1);
     HttpClient? _httpClient;
     AudioPlayer? _audioPlayer;
@@ -20,14 +17,9 @@ public class AudioPlayerService : DiscordBotService {
 
     const string RADIO_URL = "https://stream.r-a-d.io/main.mp3";
 
-    public AudioPlayerService(DiscordBot bot, ILogger<AudioPlayerService> logger) {
-        _bot = bot;
-        _logger = logger;
-    }
-
     public async Task<IResult> PlayRadio(Snowflake guildId, Snowflake channelId, CancellationToken cancellationToken = default) {
         try {
-            VoiceExtension voiceExtension = _bot.GetRequiredExtension<VoiceExtension>();
+            VoiceExtension voiceExtension = Bot.GetRequiredExtension<VoiceExtension>();
             _voiceConnection = await voiceExtension.ConnectAsync(guildId, channelId);
 
             _httpClient = new HttpClient();
@@ -42,7 +34,7 @@ public class AudioPlayerService : DiscordBotService {
 
             return Results.Failure("Impossible de diffuser la radio.");
         } catch (Exception ex) {
-            _logger.LogError(ex, "Error while trying to start the radio");
+            Logger.LogError(ex, "Error while trying to start the radio");
             return Results.Failure("Une erreur est survenue !");
         }
     }
@@ -67,7 +59,7 @@ public class AudioPlayerService : DiscordBotService {
                 _voiceConnection = null;
             }
         } catch (Exception ex) {
-            _logger.LogError(ex, "Error while trying to stop the radio");
+            Logger.LogError(ex, "Error while trying to stop the radio");
             return Results.Failure("Une erreur est survenue lors de la déconnexion");
         } finally {
             _semaphore.Release();
@@ -77,20 +69,20 @@ public class AudioPlayerService : DiscordBotService {
     }
 
     public CachedVoiceState? GetBotVoiceState(Snowflake guildId) {
-        return _bot.GetVoiceState(guildId, _bot.CurrentUser.Id);
+        return Bot.GetVoiceState(guildId, Bot.CurrentUser.Id);
     }
 
     public CachedVoiceState? GetMemberVoiceState(Snowflake guildId, Snowflake memberId) {
-        return _bot.GetVoiceState(guildId, memberId);
+        return Bot.GetVoiceState(guildId, memberId);
     }
 
     bool IsVoiceChannelEmpty(Snowflake guildId, Snowflake channelId) {
-        IReadOnlyDictionary<Snowflake, CachedVoiceState> voiceStates = _bot.GetVoiceStates(guildId);
-        return !voiceStates.Any(vs => vs.Value.ChannelId == channelId && vs.Key != _bot.CurrentUser.Id);
+        IReadOnlyDictionary<Snowflake, CachedVoiceState> voiceStates = Bot.GetVoiceStates(guildId);
+        return !voiceStates.Any(vs => vs.Value.ChannelId == channelId && vs.Key != Bot.CurrentUser.Id);
     }
 
     protected override ValueTask OnReady(ReadyEventArgs e) {
-        _logger.LogInformation("AudioPlayerService Ready fired!");
+        Logger.LogInformation("AudioPlayerService Ready fired!");
         return default;
     }
 
@@ -102,7 +94,7 @@ public class AudioPlayerService : DiscordBotService {
         CachedVoiceState? botVoiceState = GetBotVoiceState(e.GuildId);
         if (botVoiceState != null && botVoiceState.ChannelId.HasValue) {
             if (IsVoiceChannelEmpty(e.GuildId, botVoiceState.ChannelId.Value)) {
-                _logger.LogInformation("Bot left voice channel in guild {GuildId} because it became empty", e.GuildId);
+                Logger.LogInformation("Bot left voice channel in guild {GuildId} because it became empty", e.GuildId);
                 await StopRadio();
             }
         }
