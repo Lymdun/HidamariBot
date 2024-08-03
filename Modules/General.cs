@@ -22,7 +22,7 @@ public class General : HidamariBotModuleBase {
         return Response("Question enregistrée avec succès.");
     }
 
-    [SlashCommand("radio"), Description("Rejoint le salon vocal et lance la radio KJ")]
+    [SlashCommand("radio"), Description("Rejoint le salon vocal et lance la radio KJ. Queue disponible sur r-a-d.io")]
     public async Task<IResult> PlayRadio() {
         Snowflake guildId = Context.GuildId.GetValueOrDefault();
         var audioService = Context.Bot.Services.GetRequiredService(typeof(AudioPlayerService)) as AudioPlayerService;
