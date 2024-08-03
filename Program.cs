@@ -60,7 +60,6 @@ public static class Program {
     static void ConfigureServices(HostBuilderContext context, IServiceCollection services) {
         services.AddInteractivityExtension();
         services.AddVoiceExtension();
-        services.AddSingleton<AudioPlayerService>();
         services.AddLogging();
     }
 
