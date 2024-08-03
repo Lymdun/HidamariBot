@@ -3,7 +3,6 @@ using Disqord.Bot.Hosting;
 using Disqord.Extensions.Interactivity;
 using Disqord.Extensions.Voice;
 using Disqord.Gateway;
-using HidamariBot.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -15,10 +14,11 @@ using ILogger = Serilog.ILogger;
 namespace HidamariBot;
 
 public static class Program {
-    const string TOKEN = "MTA5NTAxMzE1MTgzNTE4MTE5Nw.GjSENx.M9iKyyiB9eKwE8HxmQIbAQjUSoqZqphZ32Vge0";
     const ulong OWNER_ID = 435044125033889793;
 
     static void Main(string[] args) {
+        DotNetEnv.Env.Load();
+
         using (IHost host = CreateHost(args)) {
             host.Run();
         }
@@ -31,6 +31,7 @@ public static class Program {
             })
             .ConfigureAppConfiguration(x => {
                 x.AddCommandLine(args);
+                x.AddEnvironmentVariables();
             })
             .ConfigureLogging(x => {
                 ILogger loggerConfig = new LoggerConfiguration()
@@ -42,13 +43,14 @@ public static class Program {
                 x.Services.AddSingleton(typeof(ILogger<>), typeof(Logger<>));
             })
             .ConfigureServices(ConfigureServices)
-            .ConfigureDiscordBot<HidamariDiscordBot>((_, bot) => {
-                bot.Token = TOKEN;
+            .ConfigureDiscordBot<HidamariDiscordBot>((context, bot) => {
+                bot.Token = context.Configuration["DISCORD_TOKEN"];
                 bot.ReadyEventDelayMode = ReadyEventDelayMode.Guilds;
                 bot.Status = UserStatus.Online;
                 bot.Activities = new[] { LocalActivity.Watching("la neige tomber") };
                 bot.OwnerIds = new[] { new Snowflake(OWNER_ID) };
                 bot.Intents = GetDiscordIntents();
+                bot.UseMentionPrefix = false;
             })
             .UseDefaultServiceProvider(x => {
                 x.ValidateOnBuild = true;

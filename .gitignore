@@ -58,3 +58,5 @@ project.lock.json
 # Plugins
 *.exe
 libsodium.dll
+
+.env
