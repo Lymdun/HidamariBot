@@ -55,11 +55,13 @@ public class SchedulerService : DiscordBotService {
                 await SendMeme(stoppingToken, Meme.TuesdayMeme());
                 Logger.LogInformation("SendMorningMessage fired!");
                 break;
+            default:
+                Logger.LogInformation("No meme to send today");
+                break;
         }
     }
 
     async Task SendMeme(CancellationToken stoppingToken, Meme meme) {
-        var message = new LocalMessage();
         string filePath = Path.Combine("./resources", meme.ImageUrl);
 
         if (!File.Exists(filePath)) {
@@ -67,6 +69,7 @@ public class SchedulerService : DiscordBotService {
             return;
         }
 
+        var message = new LocalMessage();
         await using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read)) {
             message.WithAttachments(LocalAttachment.File(fs));
             await Bot.SendMessageAsync(CHANNEL_ID, message, cancellationToken: stoppingToken);
