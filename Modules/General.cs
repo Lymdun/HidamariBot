@@ -49,7 +49,7 @@ public class General : HidamariBotModuleBase {
             return Response("Je ne suis pas connecté à un salon vocal.");
         }
 
-        IResult result = await audioService.StopRadio();
+        IResult result = await audioService.StopRadio(guildId);
 
         return result.IsSuccessful
             ? Response("J'ai arrêté la radio et quitté le salon vocal.")

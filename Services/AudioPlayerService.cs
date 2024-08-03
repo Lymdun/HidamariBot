@@ -13,19 +13,18 @@ public class AudioPlayerService : DiscordBotService {
     readonly SemaphoreSlim _semaphore = new(1, 1);
     HttpClient? _httpClient;
     AudioPlayer? _audioPlayer;
-    IVoiceConnection? _voiceConnection;
 
     const string RADIO_URL = "https://stream.r-a-d.io/main.mp3";
 
-    public async Task<IResult> PlayRadio(Snowflake guildId, Snowflake channelId, CancellationToken cancellationToken = default) {
+    public async Task<IResult> PlayRadio(Snowflake guildId, Snowflake channelId) {
         try {
             VoiceExtension voiceExtension = Bot.GetRequiredExtension<VoiceExtension>();
-            _voiceConnection = await voiceExtension.ConnectAsync(guildId, channelId);
+            IVoiceConnection voiceConnection = await voiceExtension.ConnectAsync(guildId, channelId);
 
             _httpClient = new HttpClient();
             Stream stream = await _httpClient.GetStreamAsync(RADIO_URL);
             var audioSource = new FFmpegAudioSource(stream);
-            _audioPlayer = new AudioPlayer(_voiceConnection);
+            _audioPlayer = new AudioPlayer(voiceConnection);
 
             if (_audioPlayer.TrySetSource(audioSource)) {
                 _audioPlayer.Start();
@@ -39,7 +38,9 @@ public class AudioPlayerService : DiscordBotService {
         }
     }
 
-    public async Task<IResult> StopRadio() {
+    public async Task<IResult> StopRadio(Snowflake guildId) {
+        VoiceExtension voiceExtension = Bot.GetRequiredExtension<VoiceExtension>();
+
         await _semaphore.WaitAsync();
 
         try {
@@ -54,10 +55,7 @@ public class AudioPlayerService : DiscordBotService {
                 _httpClient = null;
             }
 
-            if (_voiceConnection != null) {
-                await _voiceConnection.DisposeAsync();
-                _voiceConnection = null;
-            }
+            await voiceExtension.DisconnectAsync(guildId);
         } catch (Exception ex) {
             Logger.LogError(ex, "Error while trying to stop the radio");
             return Results.Failure("Une erreur est survenue lors de la déconnexion");
@@ -88,14 +86,14 @@ public class AudioPlayerService : DiscordBotService {
 
     protected override async ValueTask OnVoiceStateUpdated(VoiceStateUpdatedEventArgs e) {
         if (e.MemberId == Bot.CurrentUser.Id && e.NewVoiceState.ChannelId == null) {
-            await StopRadio();
+            await StopRadio(e.GuildId);
         }
 
         CachedVoiceState? botVoiceState = GetBotVoiceState(e.GuildId);
         if (botVoiceState != null && botVoiceState.ChannelId.HasValue) {
             if (IsVoiceChannelEmpty(e.GuildId, botVoiceState.ChannelId.Value)) {
                 Logger.LogInformation("Bot left voice channel in guild {GuildId} because it became empty", e.GuildId);
-                await StopRadio();
+                await StopRadio(e.GuildId);
             }
         }
     }
