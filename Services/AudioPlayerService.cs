@@ -13,28 +13,29 @@ public class AudioPlayerService : DiscordBotService {
     readonly SemaphoreSlim _semaphore = new(1, 1);
     HttpClient? _httpClient;
     AudioPlayer? _audioPlayer;
+    CancellationTokenSource? _cts;
 
     const string RADIO_URL = "https://stream.r-a-d.io/main.mp3";
 
+    const int RECONNECT_ATTEMPTS = 3;
+    const int RECONNECT_DELAY_MS = 5000;
+    const int BUFFER_SIZE = 1024 * 1024; // 1MB buffer
+
     public async Task<IResult> PlayRadio(Snowflake guildId, Snowflake channelId) {
         try {
-            VoiceExtension voiceExtension = Bot.GetRequiredExtension<VoiceExtension>();
-
             await _semaphore.WaitAsync();
 
-            IVoiceConnection voiceConnection = await voiceExtension.ConnectAsync(guildId, channelId);
+            _cts = new CancellationTokenSource();
+
+            VoiceExtension voiceExtension = Bot.GetRequiredExtension<VoiceExtension>();
+            IVoiceConnection voiceConnection = await voiceExtension.ConnectAsync(guildId, channelId, _cts.Token);
 
             _httpClient = new HttpClient();
-            Stream stream = await _httpClient.GetStreamAsync(RADIO_URL);
-            var audioSource = new FFmpegAudioSource(stream);
             _audioPlayer = new AudioPlayer(voiceConnection);
 
-            if (_audioPlayer.TrySetSource(audioSource)) {
-                _audioPlayer.Start();
-                return Results.Success;
-            }
+            _ = PlayRadioWithReconnectionAsync(guildId);
 
-            return Results.Failure("Impossible de diffuser la radio.");
+            return Results.Success;
         } catch (Exception ex) {
             Logger.LogError(ex, "Error while trying to start the radio");
             return Results.Failure("Une erreur est survenue !");
@@ -43,12 +44,52 @@ public class AudioPlayerService : DiscordBotService {
         }
     }
 
-    public async Task<IResult> StopRadio(Snowflake guildId) {
-        VoiceExtension voiceExtension = Bot.GetRequiredExtension<VoiceExtension>();
+    async Task PlayRadioWithReconnectionAsync(Snowflake guildId) {
+        int attempts = 0;
+        while (_cts != null && !_cts.IsCancellationRequested && attempts < RECONNECT_ATTEMPTS) {
+            try {
+                using HttpResponseMessage response =
+                    await _httpClient!.GetAsync(RADIO_URL, HttpCompletionOption.ResponseHeadersRead, _cts.Token);
+                response.EnsureSuccessStatusCode();
 
+                await using Stream stream = await response.Content.ReadAsStreamAsync(_cts.Token);
+                await using var bufferedStream = new BufferedStream(stream, BUFFER_SIZE);
+
+                var audioSource = new FFmpegAudioSource(bufferedStream);
+
+                if (_audioPlayer!.TrySetSource(audioSource)) {
+                    _audioPlayer.Start();
+                    await Task.Delay(-1, _cts.Token); // wait indefinitely
+                }
+
+                attempts = 0; // reset attempts on successful playback
+            } catch (OperationCanceledException) {
+                break; // exit if cancellation was requested
+            } catch (Exception ex) {
+                attempts++;
+                Logger.LogError(ex, "Error during radio playback. Attempt {Attempt} of {MaxAttempts}", attempts,
+                    RECONNECT_ATTEMPTS);
+
+                if (attempts < RECONNECT_ATTEMPTS) {
+                    await Task.Delay(RECONNECT_DELAY_MS, _cts.Token);
+                }
+            }
+        }
+
+        if (attempts >= RECONNECT_ATTEMPTS) {
+            Logger.LogWarning("Max reconnection attempts reached for guild {GuildId}. Stopping radio", guildId);
+            await StopRadio(guildId);
+        }
+    }
+
+    public async Task<IResult> StopRadio(Snowflake guildId) {
         await _semaphore.WaitAsync();
 
         try {
+            _cts?.Cancel();
+            _cts?.Dispose();
+            _cts = null;
+
             if (_audioPlayer != null) {
                 _audioPlayer.Stop();
                 await _audioPlayer.DisposeAsync();
@@ -60,15 +101,16 @@ public class AudioPlayerService : DiscordBotService {
                 _httpClient = null;
             }
 
+            VoiceExtension voiceExtension = Bot.GetRequiredExtension<VoiceExtension>();
             await voiceExtension.DisconnectAsync(guildId);
+
+            return Results.Success;
         } catch (Exception ex) {
             Logger.LogError(ex, "Error while trying to stop the radio");
             return Results.Failure("Une erreur est survenue lors de la déconnexion");
         } finally {
             _semaphore.Release();
         }
-
-        return Results.Success;
     }
 
     public CachedVoiceState? GetBotVoiceState(Snowflake guildId) {
