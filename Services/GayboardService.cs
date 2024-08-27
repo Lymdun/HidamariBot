@@ -1,4 +1,4 @@
-﻿using Disqord;
+using Disqord;
 using Disqord.Bot.Hosting;
 using Disqord.Gateway;
 using Disqord.Rest;
@@ -11,6 +11,7 @@ public class GayboardService : DiscordBotService {
     const ulong CHANNEL_ID = 542701796787879937;
     const ushort MIN_REACTIONS_REQUIRED = 5;
     static readonly IEmoji DETECTABLE_EMOTE = new LocalEmoji("🏳️‍🌈");
+    static List<IMessage> oldMessages = new List<IMessage>();
 
     protected override async ValueTask OnReactionAdded(ReactionAddedEventArgs e) {
         var message = await Client.FetchMessageAsync(e.ChannelId, e.MessageId) as IUserMessage;
@@ -19,11 +20,15 @@ public class GayboardService : DiscordBotService {
 
         if (message.Reactions.TryGetValue(out IReadOnlyDictionary<IEmoji, IMessageReaction>? reactions)) {
             if (reactions.TryGetValue(DETECTABLE_EMOTE, out IMessageReaction? reaction) && reaction.Count == MIN_REACTIONS_REQUIRED) {
-                IReadOnlyList<IMessage> oldMessages = await Client.FetchMessagesAsync(CHANNEL_ID, limit: 50);
-                if (oldMessages.Any(x => x.Content.Equals(message.Content))) {
+                if (oldMessages.Count == 0) {
+                    oldMessages = new List<IMessage>(await Client.FetchMessagesAsync(CHANNEL_ID, limit: 50));
+                }
+
+                if (oldMessages.Any(x => x.Content.Equals($"https://discord.com/channels/{e.GuildId}/{e.ChannelId}/{e.MessageId}"))) {
                     Logger.LogWarning("Failed to post this gay message as it was already posted");
                     return;
                 }
+
 
                 var embed = new LocalEmbed {
                     Color = Color.Pink,
@@ -50,7 +55,9 @@ public class GayboardService : DiscordBotService {
                     Content = $"https://discord.com/channels/{e.GuildId}/{e.ChannelId}/{e.MessageId}"
                 };
 
-                await Bot.SendMessageAsync(CHANNEL_ID, newMessage);
+                
+
+                oldMessages.Add(await Bot.SendMessageAsync(CHANNEL_ID, newMessage));
             }
         }
     }
