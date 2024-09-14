@@ -48,7 +48,7 @@ public class GayboardService : DiscordBotService {
 
                 var newMessage = new LocalMessage {
                     Embeds = new List<LocalEmbed> { embed },
-                    Content = $"https://discord.com/channels/{e.GuildId}/{e.ChannelId}/{e.MessageId}"
+                    Content = contentString
                 };
 
                 await Bot.SendMessageAsync(CHANNEL_ID, newMessage);
