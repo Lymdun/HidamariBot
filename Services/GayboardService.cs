@@ -19,8 +19,9 @@ public class GayboardService : DiscordBotService {
 
         if (message.Reactions.TryGetValue(out IReadOnlyDictionary<IEmoji, IMessageReaction>? reactions)) {
             if (reactions.TryGetValue(DETECTABLE_EMOTE, out IMessageReaction? reaction) && reaction.Count == MIN_REACTIONS_REQUIRED) {
-                IReadOnlyList<IMessage> oldMessages = await Client.FetchMessagesAsync(CHANNEL_ID, limit: 50);
-                if (oldMessages.Any(x => x.Content.Equals(message.Content))) {
+                IReadOnlyList<IMessage> oldMessages = await Client.FetchMessagesAsync(CHANNEL_ID, limit: 50) as List<IMessage>;
+                string contentString = $"https://discord.com/channels/{e.GuildId}/{message.ChannelId}/{message.Id}";
+                if (oldMessages.Any(x => x.Content.Equals(contentString))) {
                     Logger.LogWarning("Failed to post this gay message as it was already posted");
                     return;
                 }
