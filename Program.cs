@@ -64,7 +64,6 @@ public static class Program {
         services.AddInteractivityExtension();
         services.AddVoiceExtension();
         services.AddLogging();
-        services.AddHostedService<MemberLeaveService>();
     }
 
     static GatewayIntents GetDiscordIntents() {

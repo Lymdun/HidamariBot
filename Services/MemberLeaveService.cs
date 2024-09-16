@@ -10,6 +10,11 @@ public class MemberLeaveService : DiscordBotService {
     const ulong NOTIFICATION_CHANNEL_ID = 830851922889539644;
     const string IMAGE_PATH = "resources/leave.jpg";
 
+    protected override ValueTask OnReady(ReadyEventArgs e) {
+        Logger.LogInformation("MemberLeaveService Ready fired!");
+        return default;
+    }
+
     protected override ValueTask OnMemberLeft(MemberLeftEventArgs e) {
         _ = SendLeaveNotificationAsync(e.GuildId, e.User);
         return default;
