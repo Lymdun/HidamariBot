@@ -8,7 +8,7 @@ using Qommon;
 namespace HidamariBot.Services;
 
 public class GayboardService : DiscordBotService {
-    const ulong CHANNEL_ID = 1280888903393607820;
+    const ulong CHANNEL_ID = 542701796787879937;
     const ushort MIN_REACTIONS_REQUIRED = 5;
     static readonly IEmoji DETECTABLE_EMOTE = new LocalEmoji("🏳️‍🌈");
 
