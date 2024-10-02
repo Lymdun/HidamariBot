@@ -4,7 +4,9 @@ using Disqord.Extensions.Voice;
 using Disqord.Gateway;
 using Disqord.Voice;
 using HidamariBot.Audio;
+using HidamariBot.Models;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 using Qmmands;
 
 namespace HidamariBot.Services;
@@ -16,6 +18,7 @@ public class AudioPlayerService : DiscordBotService {
     CancellationTokenSource? _cts;
 
     const string RADIO_URL = "https://stream.r-a-d.io/main.mp3";
+    const string RADIO_API_URL = "https://r-a-d.io/api";
 
     const int RECONNECT_ATTEMPTS = 3;
     const int RECONNECT_DELAY_MS = 5000;
@@ -80,6 +83,21 @@ public class AudioPlayerService : DiscordBotService {
             Logger.LogWarning("Max reconnection attempts reached for guild {GuildId}. Stopping radio", guildId);
             await StopRadio(guildId);
         }
+    }
+
+    public async Task<string> GetCurrentSongTitleAsync() {
+        try {
+            string response = await _httpClient.GetStringAsync(RADIO_API_URL);
+            RadioInfo? radioInfo = JsonSerializer.Deserialize<RadioInfo>(response);
+
+            if (radioInfo?.Main.NowPlaying != null) {
+                 return radioInfo.Main.NowPlaying;
+            }
+        } catch (Exception ex) {
+            Logger.LogError(ex, "Error getting current song title");
+        }
+
+        return string.Empty;
     }
 
     public async Task<IResult> StopRadio(Snowflake guildId) {

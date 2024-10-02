@@ -55,4 +55,12 @@ public class General : HidamariBotModuleBase {
             ? Response("J'ai arrêté la radio et quitté le salon vocal.")
             : Response(result.FailureReason ?? "Une erreur inconnue est survenue.");
     }
+
+    [SlashCommand("radio-title"), Description("Affiche le titre de la musique jouant sur la radio")]
+    public async Task<IResult> ShowRadioTitle() {
+        var audioService = Context.Bot.Services.GetRequiredService(typeof(AudioPlayerService)) as AudioPlayerService;
+        string title = await audioService.GetCurrentSongTitleAsync();
+
+        return Response($"Le title de la musique est : {title}");
+    }
 }

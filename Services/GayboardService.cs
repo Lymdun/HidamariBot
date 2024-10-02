@@ -8,7 +8,7 @@ using Qommon;
 namespace HidamariBot.Services;
 
 public class GayboardService : DiscordBotService {
-    const ulong CHANNEL_ID = 542701796787879937;
+    const ulong CHANNEL_ID = 1280888903393607820;
     const ushort MIN_REACTIONS_REQUIRED = 5;
     static readonly IEmoji DETECTABLE_EMOTE = new LocalEmoji("🏳️‍🌈");
 
@@ -19,7 +19,7 @@ public class GayboardService : DiscordBotService {
 
         if (message.Reactions.TryGetValue(out IReadOnlyDictionary<IEmoji, IMessageReaction>? reactions)) {
             if (reactions.TryGetValue(DETECTABLE_EMOTE, out IMessageReaction? reaction) && reaction.Count == MIN_REACTIONS_REQUIRED) {
-                IReadOnlyList<IMessage> oldMessages = await Client.FetchMessagesAsync(CHANNEL_ID, limit: 50) as List<IMessage>;
+                IReadOnlyList<IMessage> oldMessages = await Client.FetchMessagesAsync(CHANNEL_ID, limit: 50);
                 string contentString = $"https://discord.com/channels/{e.GuildId}/{message.ChannelId}/{message.Id}";
                 if (oldMessages.Any(x => x.Content.Equals(contentString))) {
                     Logger.LogWarning("Failed to post this gay message as it was already posted");
