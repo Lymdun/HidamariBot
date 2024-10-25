@@ -28,7 +28,7 @@ public class GayboardService : DiscordBotService {
             return false;
 
         return reactions.TryGetValue(DETECTABLE_EMOTE, out IMessageReaction? reaction)
-            && reaction.Count >= MIN_REACTIONS_REQUIRED;
+            && reaction.Count == MIN_REACTIONS_REQUIRED;
     }
 
     async Task<bool> IsAlreadyPosted(Snowflake guildId, IMessage message) {
