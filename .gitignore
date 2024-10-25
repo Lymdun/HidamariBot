@@ -44,8 +44,12 @@ appsettings.Production.json
 Thumbs.db
 
 # Discord bot specific files
+.env
 config.json
 token.txt
+
+# No clue
+application-commands/
 
 # Other files and folders to ignore
 *.swp
@@ -58,5 +62,3 @@ project.lock.json
 # Plugins
 *.exe
 libsodium.dll
-
-.env
