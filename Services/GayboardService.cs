@@ -86,13 +86,12 @@ public class GayboardService : DiscordBotService {
 
     private void AddAttachmentIfExists(IUserMessage message, LocalEmbed embed)
     {
-        if (message.Attachments.Count > 0)
+        if (message.Attachments.Count == 0) return;
+
+        var firstAttachment = message.Attachments[0];
+        if (firstAttachment.ContentType?.StartsWith("image/") == true)
         {
-            var firstAttachment = message.Attachments[0];
-            if (firstAttachment.ContentType?.StartsWith("image/") == true)
-            {
-                embed.ImageUrl = firstAttachment.Url;
-            }
+            embed.ImageUrl = firstAttachment.Url;
         }
     }
 

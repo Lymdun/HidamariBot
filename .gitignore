@@ -48,6 +48,9 @@ Thumbs.db
 config.json
 token.txt
 
+# No clue
+application-commands/
+
 # Other files and folders to ignore
 *.swp
 *.*~
