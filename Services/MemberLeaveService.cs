@@ -1,4 +1,4 @@
-﻿using Disqord;
+using Disqord;
 using Disqord.Bot.Hosting;
 using Disqord.Gateway;
 using Microsoft.Extensions.Logging;
@@ -26,7 +26,7 @@ public class MemberLeaveService : DiscordBotService {
                 .WithContent($"{Mention.User(user.Id)} dans le wagon le non-KJ");
 
             if (File.Exists(IMAGE_PATH)) {
-                await using (var fs = new FileStream(IMAGE_PATH, FileMode.Open, FileAccess.Read)) {
+                await using (FileStream fs = new FileStream(IMAGE_PATH, FileMode.Open, FileAccess.Read)) {
                     message.WithAttachments(LocalAttachment.File(fs));
 
                     await Bot.SendMessageAsync(NOTIFICATION_CHANNEL_ID, message);
