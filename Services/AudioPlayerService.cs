@@ -62,12 +62,15 @@ public class AudioPlayerService : DiscordBotService {
 
                 if (_audioPlayer!.TrySetSource(audioSource)) {
                     _audioPlayer.Start();
-                    await Task.Delay(-1, _cts.Token); // wait indefinitely
+
+                    while (_audioPlayer.IsPlaying && !_cts.Token.IsCancellationRequested) {
+                        await Task.Delay(1000, _cts.Token);
+                    }
                 }
 
                 attempts = 0; // reset attempts on successful playback
             } catch (OperationCanceledException) {
-                break; // exit if cancellation was requested
+                break;
             } catch (Exception ex) {
                 attempts++;
                 Logger.LogError(ex, "Error during radio playback. Attempt {Attempt} of {MaxAttempts}", attempts,
@@ -91,7 +94,7 @@ public class AudioPlayerService : DiscordBotService {
             RadioInfo? radioInfo = JsonSerializer.Deserialize<RadioInfo>(response);
 
             if (radioInfo?.Main.NowPlaying != null) {
-                 return radioInfo.Main.NowPlaying;
+                return radioInfo.Main.NowPlaying;
             }
         } catch (Exception ex) {
             Logger.LogError(ex, "Error getting current song title");

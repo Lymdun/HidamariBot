@@ -21,54 +21,37 @@ public class FFmpegAudioSource : AudioSource {
         _stream = stream;
     }
 
+    // https://ffmpeg.org/ffmpeg.html
     static void PopulateFFmpegArguments(Collection<string> arguments) {
-        // You can add your own arguments here.
-        // For example, you could add support for changing the volume using:
-        // arguments.Add("-filter:a");
-        // arguments.Add("\"volume=0.5\"");
-        //
-        // You could also set the volume float via the constructor.
-        // You'd then make PopulateFFmpegArguments non-static and set it dynamically.
-        // arguments.Add("-filter:a");
-        // arguments.Add($"\"volume={Volume}\"");
-        //
-        // Keep in mind that the position of some FFmpeg arguments matters!
-        //
-        // Depending on their position in the argument string,
-        // they can behave differently.
-        // For example, `-ss` placed before `-i` is input seeking
-        // and placed after `-i` is output seeking.
-
-        // [Recommended]: Sets the log level to error.
         arguments.Add("-loglevel");
         arguments.Add("error");
 
-        // [Required]: Sets the input to stdin.
         arguments.Add("-i");
         arguments.Add("pipe:0");
 
-        // [Required]: Sets the audio codec to libopus.
-        arguments.Add("-c:a");
-        arguments.Add("libopus");
+        arguments.Add("-ar");
+        arguments.Add("48000");
 
-        // [Required]: Sets the Opus application type.
-        arguments.Add("-application");
-        arguments.Add("audio");
-
-        // [Required]: Sets the Opus frame duration to 20ms.
-        arguments.Add("-frame_duration");
-        arguments.Add("20");
-
-        // [Required]: Sets the format to Ogg audio.
-        arguments.Add("-f");
-        arguments.Add("oga");
-
-        // [Required]: Sets the output to stdout.
-        // Must be the last argument.
-        arguments.Add("pipe:1");
+        arguments.Add("-b:a");
+        arguments.Add("128k");
 
         arguments.Add("-filter:a");
         arguments.Add("volume=0.5");
+
+        arguments.Add("-c:a");
+        arguments.Add("libopus");
+
+        arguments.Add("-application");
+        arguments.Add("audio");
+
+        arguments.Add("-frame_duration");
+        arguments.Add("20");
+
+        arguments.Add("-f");
+        arguments.Add("oga");
+
+        // Must be the LAST argument
+        arguments.Add("pipe:1");
     }
 
     public override async IAsyncEnumerator<Memory<byte>> GetAsyncEnumerator(CancellationToken cancellationToken) {
