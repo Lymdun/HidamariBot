@@ -1,4 +1,4 @@
-﻿using Disqord;
+using Disqord;
 using Disqord.Bot.Hosting;
 using Disqord.Gateway;
 using Microsoft.Extensions.Logging;
@@ -22,7 +22,7 @@ public class MemberLeaveService : DiscordBotService {
 
     async Task SendLeaveNotificationAsync(Snowflake guildId, IUser user) {
         try {
-            LocalMessage message = new LocalMessage()
+            var message = new LocalMessage()
                 .WithContent($"{Mention.User(user.Id)} dans le wagon le non-KJ");
 
             if (File.Exists(IMAGE_PATH)) {
