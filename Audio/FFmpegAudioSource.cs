@@ -21,6 +21,7 @@ public class FFmpegAudioSource : AudioSource {
         _stream = stream;
     }
 
+    // https://ffmpeg.org/ffmpeg.html
     static void PopulateFFmpegArguments(Collection<string> arguments) {
         arguments.Add("-loglevel");
         arguments.Add("error");
@@ -49,6 +50,7 @@ public class FFmpegAudioSource : AudioSource {
         arguments.Add("-f");
         arguments.Add("oga");
 
+        // Must be the LAST argument
         arguments.Add("pipe:1");
     }
 
