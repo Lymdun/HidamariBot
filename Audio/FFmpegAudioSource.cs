@@ -28,6 +28,12 @@ public class FFmpegAudioSource : AudioSource {
         arguments.Add("-i");
         arguments.Add("pipe:0");
 
+        arguments.Add("-ar");
+        arguments.Add("48000");
+
+        arguments.Add("-b:a");
+        arguments.Add("128k");
+
         arguments.Add("-filter:a");
         arguments.Add("volume=0.5");
 
