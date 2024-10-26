@@ -22,11 +22,11 @@ public class MemberLeaveService : DiscordBotService {
 
     async Task SendLeaveNotificationAsync(Snowflake guildId, IUser user) {
         try {
-            LocalMessage message = new LocalMessage()
+            var message = new LocalMessage()
                 .WithContent($"{Mention.User(user.Id)} dans le wagon le non-KJ");
 
             if (File.Exists(IMAGE_PATH)) {
-                await using (FileStream fs = new FileStream(IMAGE_PATH, FileMode.Open, FileAccess.Read)) {
+                await using (var fs = new FileStream(IMAGE_PATH, FileMode.Open, FileAccess.Read)) {
                     message.WithAttachments(LocalAttachment.File(fs));
 
                     await Bot.SendMessageAsync(NOTIFICATION_CHANNEL_ID, message);
