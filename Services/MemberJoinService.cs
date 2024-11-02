@@ -7,7 +7,7 @@ using Disqord.Rest;
 namespace HidamariBot.Services;
 
 public class MemberJoinService : DiscordBotService {
-    const ulong NOTIFICATION_CHANNEL_ID = 830851922889539644;
+    const ulong NOTIFICATION_CHANNEL_ID = 1203052960712622110;
     const string IMAGE_PATH = "./resources/chezlymdun.png";
 
     const string QUESTIONNAIRE_MESSAGE_PATH =
