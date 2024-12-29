@@ -75,8 +75,20 @@ public class General : HidamariBotModuleBase {
     public async Task<IResult> ShowRadioTitle() {
         var audioService = Context.Bot.Services.GetRequiredService(typeof(AudioPlayerService)) as AudioPlayerService;
         AudioPlayerService.RadioStatus radioStatus = await audioService.GetRadioStatusAsync();
-        string title = radioStatus.NowPlaying ?? "Inconnu";
 
-        return Response($"Le titre de la musique est : {title}");
+        var embed = new LocalEmbed()
+            .WithTitle($"Le titre de la musique est : {radioStatus.NowPlaying}")
+            .WithDescription($"**DJ :** {radioStatus.DjName}")
+            .WithColor(Color.Orange);
+
+        if (!string.IsNullOrEmpty(radioStatus.DjImage)) {
+            embed.WithThumbnailUrl($"https://r-a-d.io/api/dj-image/{radioStatus.DjImage}");
+        }
+
+        if (!string.IsNullOrEmpty(radioStatus.ThreadImage)) {
+            embed.WithImageUrl(radioStatus.ThreadImage);
+        }
+
+        return Response(embed);
     }
 }

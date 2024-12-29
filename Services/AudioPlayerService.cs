@@ -125,7 +125,7 @@ public class AudioPlayerService : DiscordBotService {
     /// "https://shamiko.org/assets/images/src/55522b96f42010c97881e1bcf40cc1dc22081143.jpg"
     /// </example>
     string ExtractThreadImageUrl(string? threadHtml) {
-        if (string.IsNullOrWhiteSpace(threadHtml))
+        if (string.IsNullOrWhiteSpace(threadHtml) || threadHtml.Length < 5)
             return string.Empty;
 
         Match match = Regex.Match(threadHtml, @"src=""([^""]+)""");
