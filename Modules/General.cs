@@ -30,11 +30,26 @@ public class General : HidamariBotModuleBase {
 
         IResult result = await audioService.PlayRadio(guildId, memberVoiceState.ChannelId.GetValueOrDefault());
 
-        if (result.IsSuccessful) {
-            return Response("C'est parti pour s'enjailler sur de la musique KJ !");
+        if (!result.IsSuccessful) {
+            return Response(result.FailureReason ?? "Une erreur inconnue est survenue.");
         }
 
-        return Response(result.FailureReason ?? "Une erreur inconnue est survenue.");
+        AudioPlayerService.RadioStatus radioStatus = await audioService.GetRadioStatusAsync();
+
+        var embed = new LocalEmbed()
+            .WithTitle("C'est parti pour s'enjailler sur de la musique KJ !")
+            .WithDescription($"**DJ :** {radioStatus.DjName}\n**En ce moment :** {radioStatus.NowPlaying}")
+            .WithColor(Color.Orange);
+
+        if (!string.IsNullOrEmpty(radioStatus.DjImage)) {
+            embed.WithThumbnailUrl($"https://r-a-d.io/api/dj-image/{radioStatus.DjImage}");
+        }
+
+        if (!string.IsNullOrEmpty(radioStatus.ThreadImage)) {
+            embed.WithImageUrl(radioStatus.ThreadImage);
+        }
+
+        return Response(embed);
     }
 
     [SlashCommand("radio-stop"), Description("Arrête la radio et me déconnecte du salon vocal")]
@@ -59,8 +74,9 @@ public class General : HidamariBotModuleBase {
     [SlashCommand("radio-title"), Description("Affiche le titre de la musique jouant sur la radio")]
     public async Task<IResult> ShowRadioTitle() {
         var audioService = Context.Bot.Services.GetRequiredService(typeof(AudioPlayerService)) as AudioPlayerService;
-        string title = await audioService.GetCurrentSongTitleAsync();
+        AudioPlayerService.RadioStatus radioStatus = await audioService.GetRadioStatusAsync();
+        string title = radioStatus.NowPlaying ?? "Inconnu";
 
-        return Response($"Le title de la musique est : {title}");
+        return Response($"Le titre de la musique est : {title}");
     }
 }

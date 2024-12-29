@@ -3,7 +3,6 @@ using Disqord.Bot.Hosting;
 using Disqord.Extensions.Interactivity;
 using Disqord.Extensions.Voice;
 using Disqord.Gateway;
-using HidamariBot.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

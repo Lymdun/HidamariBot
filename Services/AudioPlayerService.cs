@@ -7,6 +7,7 @@ using HidamariBot.Audio;
 using HidamariBot.Models;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Qmmands;
 
 namespace HidamariBot.Services;
@@ -88,16 +89,48 @@ public class AudioPlayerService : DiscordBotService {
         }
     }
 
-    public async Task<string> GetCurrentSongTitleAsync() {
+    public struct RadioStatus {
+        public string? NowPlaying { get; set; }
+        public string? DjName { get; set; }
+        public string? ThreadImage { get; set; }
+        public string? DjImage { get; set; }
+    }
+
+    public async Task<RadioStatus> GetRadioStatusAsync() {
         try {
-            string response = await _httpClient.GetStringAsync(RADIO_API_URL);
+            string response = await _httpClient!.GetStringAsync(RADIO_API_URL);
             RadioInfo? radioInfo = JsonSerializer.Deserialize<RadioInfo>(response);
 
-            if (radioInfo?.Main.NowPlaying != null) {
-                return radioInfo.Main.NowPlaying;
-            }
+            return new RadioStatus {
+                NowPlaying = radioInfo?.Main?.NowPlaying,
+                DjName = radioInfo?.Main?.Dj?.Name,
+                ThreadImage = ExtractThreadImageUrl(radioInfo?.Main?.Thread),
+                DjImage = radioInfo?.Main?.Dj?.Image
+            };
         } catch (Exception ex) {
-            Logger.LogError(ex, "Error getting current song title");
+            Logger.LogError(ex, "Error getting radio status");
+            return new RadioStatus();
+        }
+    }
+
+    /// <summary>
+    /// Extracts the image URL from an HTML string representing a thread.
+    /// </summary>
+    /// <param name="threadHtml">The HTML string potentially containing an img tag with a src attribute.</param>
+    /// <returns>The image URL extracted from the src attribute, or an empty string if no URL is found or the input string is null or empty.</returns>
+    /// <example>
+    /// Input example:
+    /// "thread": "\"\u003E\u003C/a\u003E\u003Cimg src=\"https://shamiko.org/assets/images/src/55522b96f42010c97881e1bcf40cc1dc22081143.jpg\" style=\"max-width:500px;\" /\u003E\u003C!--",
+    /// Expected result:
+    /// "https://shamiko.org/assets/images/src/55522b96f42010c97881e1bcf40cc1dc22081143.jpg"
+    /// </example>
+    string ExtractThreadImageUrl(string? threadHtml) {
+        if (string.IsNullOrWhiteSpace(threadHtml))
+            return string.Empty;
+
+        Match match = Regex.Match(threadHtml, @"src=""([^""]+)""");
+        if (match.Success && match.Groups.Count > 1) {
+            return match.Groups[1].Value;
         }
 
         return string.Empty;
