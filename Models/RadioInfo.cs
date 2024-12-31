@@ -12,6 +12,14 @@ public class MainInfo {
     [JsonPropertyName("dj")] public DjInfo? Dj { get; set; }
 
     [JsonPropertyName("thread")] public string? Thread { get; set; }
+
+    [JsonPropertyName("listeners")] public int? Listeners { get; set; }
+
+    [JsonPropertyName("current")] public long? Current { get; set; }
+
+    [JsonPropertyName("start_time")] public long? StartTime { get; set; }
+
+    [JsonPropertyName("end_time")] public long? EndTime { get; set; }
 }
 
 public class DjInfo {

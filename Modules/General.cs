@@ -76,10 +76,42 @@ public class General : HidamariBotModuleBase {
         var audioService = Context.Bot.Services.GetRequiredService(typeof(AudioPlayerService)) as AudioPlayerService;
         AudioPlayerService.RadioStatus radioStatus = await audioService.GetRadioStatusAsync();
 
+        string positionString = radioStatus.CurrentPosition.HasValue
+            ? radioStatus.CurrentPosition.Value.ToString(@"mm\:ss")
+            : "Inconnu";
+
+        string durationString = radioStatus.TrackDuration.HasValue
+            ? radioStatus.TrackDuration.Value.ToString(@"mm\:ss")
+            : "Inconnu";
+
+        string progressBar = "";
+        if (radioStatus.CurrentPosition.HasValue && radioStatus.TrackDuration.HasValue) {
+            double elapsedSeconds = radioStatus.CurrentPosition.Value.TotalSeconds;
+            double totalSeconds = radioStatus.TrackDuration.Value.TotalSeconds;
+
+            if (totalSeconds > 0) {
+                double fraction = elapsedSeconds / totalSeconds;
+                fraction = Math.Clamp(fraction, 0.0, 1.0);
+
+                int totalBlocks = 20;
+                int filledBlocks = (int)(fraction * totalBlocks);
+                int emptyBlocks = totalBlocks - filledBlocks;
+
+                progressBar = $"[{new string('█', filledBlocks)}{new string('░', emptyBlocks)}]";
+            }
+        }
+
         var embed = new LocalEmbed()
-            .WithTitle($"Le titre de la musique est : {radioStatus.NowPlaying}")
+            .WithTitle(radioStatus.NowPlaying ?? "Inconnu")
             .WithDescription($"**DJ :** {radioStatus.DjName}")
+            .AddField("Nombre d'auditeurs", radioStatus.Listeners.ToString() ?? "?")
             .WithColor(Color.Orange);
+
+        if (!string.IsNullOrEmpty(progressBar)) {
+            // example: [██████░░░░░░░░] 01:23 / 03:45
+            embed.AddField("Progression",
+                $"{progressBar} {positionString}/{durationString}");
+        }
 
         if (!string.IsNullOrEmpty(radioStatus.DjImage)) {
             embed.WithThumbnailUrl($"https://r-a-d.io/api/dj-image/{radioStatus.DjImage}");

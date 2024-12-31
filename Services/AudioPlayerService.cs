@@ -94,6 +94,9 @@ public class AudioPlayerService : DiscordBotService {
         public string? DjName { get; set; }
         public string? ThreadImage { get; set; }
         public string? DjImage { get; set; }
+        public int? Listeners { get; set; }
+        public TimeSpan? CurrentPosition { get; set; }
+        public TimeSpan? TrackDuration { get; set; }
     }
 
     public async Task<RadioStatus> GetRadioStatusAsync() {
@@ -101,11 +104,29 @@ public class AudioPlayerService : DiscordBotService {
             string response = await _httpClient!.GetStringAsync(RADIO_API_URL);
             RadioInfo? radioInfo = JsonSerializer.Deserialize<RadioInfo>(response);
 
+            long currentTimestamp = radioInfo?.Main?.Current ?? 0;
+            long startTimestamp = radioInfo?.Main?.StartTime ?? 0;
+            long endTimestamp = radioInfo?.Main?.EndTime ?? 0;
+
+            long positionInSeconds = currentTimestamp - startTimestamp;
+            long totalDurationInSeconds = endTimestamp - startTimestamp;
+
+            TimeSpan? currentPosition = positionInSeconds > 0
+                ? TimeSpan.FromSeconds(positionInSeconds)
+                : null;
+
+            TimeSpan? trackDuration = totalDurationInSeconds > 0
+                ? TimeSpan.FromSeconds(totalDurationInSeconds)
+                : null;
+
             return new RadioStatus {
                 NowPlaying = radioInfo?.Main?.NowPlaying,
                 DjName = radioInfo?.Main?.Dj?.Name,
                 ThreadImage = ExtractThreadImageUrl(radioInfo?.Main?.Thread),
-                DjImage = radioInfo?.Main?.Dj?.Image
+                DjImage = radioInfo?.Main?.Dj?.Image,
+                Listeners = radioInfo?.Main?.Listeners,
+                CurrentPosition = currentPosition,
+                TrackDuration = trackDuration
             };
         } catch (Exception ex) {
             Logger.LogError(ex, "Error getting radio status");
