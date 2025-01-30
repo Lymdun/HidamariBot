@@ -1,6 +1,7 @@
 ﻿using Disqord;
 using Disqord.Bot.Commands.Application;
 using Disqord.Gateway;
+using HidamariBot.Models;
 using HidamariBot.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Qmmands;
@@ -119,6 +120,54 @@ public class General : HidamariBotModuleBase {
 
         if (!string.IsNullOrEmpty(radioStatus.ThreadImage)) {
             embed.WithImageUrl(radioStatus.ThreadImage);
+        }
+
+        return Response(embed);
+    }
+
+    [SlashCommand("radio-queue"), Description("Affiche les musiques à venir")]
+    public async Task<IResult> ShowRadioQueue() {
+        var audioService = Context.Bot.Services.GetRequiredService(typeof(AudioPlayerService)) as AudioPlayerService;
+        AudioPlayerService.RadioStatus radioStatus = await audioService.GetRadioStatusAsync();
+
+        var embed = new LocalEmbed()
+            .WithTitle("Musiques à venir (Queue)")
+            .WithColor(Color.Orange);
+
+        if (radioStatus.Queue?.Count > 0) {
+            foreach (QueueTrack track in radioStatus.Queue) {
+                var trackTimestamp = DateTimeOffset.FromUnixTimeSeconds(track.Timestamp);
+                TimeSpan timeUntilPlay = trackTimestamp - DateTimeOffset.Now;
+                string timeUntilPlayText = timeUntilPlay.TotalMinutes < 1 ? "dans moins d'une minute" : $"dans {Math.Round(timeUntilPlay.TotalMinutes)} minutes";
+
+                embed.AddField($"#{radioStatus.Queue.IndexOf(track) + 1} - {track.Title}", timeUntilPlayText);
+            }
+        } else {
+            embed.WithDescription("La queue est vide.");
+        }
+
+        return Response(embed);
+    }
+
+    [SlashCommand("radio-history"), Description("Affiche l'historique des musiques jouées")]
+    public async Task<IResult> ShowRadioHistory() {
+        var audioService = Context.Bot.Services.GetRequiredService(typeof(AudioPlayerService)) as AudioPlayerService;
+        AudioPlayerService.RadioStatus radioStatus = await audioService.GetRadioStatusAsync();
+
+        var embed = new LocalEmbed()
+            .WithTitle("Historique des musiques jouées")
+            .WithColor(Color.Orange);
+
+        if (radioStatus.LastPlayed?.Count > 0) {
+            foreach (LastPlayedTrack track in radioStatus.LastPlayed) {
+                var trackTimestamp = DateTimeOffset.FromUnixTimeSeconds(track.Timestamp);
+                TimeSpan timeDiff = DateTimeOffset.Now - trackTimestamp;
+                string timeSincePlayText = timeDiff.TotalMinutes < 1 ? "il y a moins d'une minute" : $"il y a {Math.Round(timeDiff.TotalMinutes)} minutes";
+
+                embed.AddField($"#{radioStatus.LastPlayed.IndexOf(track) + 1} - {track.Title}", timeSincePlayText);
+            }
+        } else {
+            embed.WithDescription("L'historique est vide.");
         }
 
         return Response(embed);

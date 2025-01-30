@@ -97,6 +97,8 @@ public class AudioPlayerService : DiscordBotService {
         public int? Listeners { get; set; }
         public TimeSpan? CurrentPosition { get; set; }
         public TimeSpan? TrackDuration { get; set; }
+        public List<QueueTrack>? Queue { get; set; }
+        public List<LastPlayedTrack>? LastPlayed { get; set; }
     }
 
     public async Task<RadioStatus> GetRadioStatusAsync() {
@@ -126,7 +128,9 @@ public class AudioPlayerService : DiscordBotService {
                 DjImage = radioInfo?.Main?.Dj?.Image,
                 Listeners = radioInfo?.Main?.Listeners,
                 CurrentPosition = currentPosition,
-                TrackDuration = trackDuration
+                TrackDuration = trackDuration,
+                Queue = radioInfo?.Main?.Queue,
+                LastPlayed = radioInfo?.Main?.LastPlayed
             };
         } catch (Exception ex) {
             Logger.LogError(ex, "Error getting radio status");
