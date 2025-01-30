@@ -14,4 +14,8 @@ public struct Meme {
     public static Meme TuesdayMeme() {
         return new Meme("everybody.webm");
     }
+
+    public static Meme DailyWeekMeme() {
+        return new Meme("ohayo.mp4");
+    }
 }
