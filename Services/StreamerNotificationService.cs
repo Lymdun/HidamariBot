@@ -1,4 +1,5 @@
-﻿using Disqord;
+﻿using System.Text.RegularExpressions;
+using Disqord;
 using Disqord.Bot.Hosting;
 using Microsoft.Extensions.Logging;
 using Disqord.Gateway;
@@ -14,6 +15,7 @@ public class StreamerNotificationService : DiscordBotService {
 
     const ulong CHANNEL_ID = 853043236921671680;
 
+    const string BASE_URL = "https://r-a-d.io";
     const string SSE_URL = "https://r-a-d.io/v1/sse";
     const int RECONNECT_ATTEMPTS = 5;
     const int RECONNECT_DELAY_MS = 1500;
@@ -52,14 +54,21 @@ public class StreamerNotificationService : DiscordBotService {
                 await using Stream stream = await response.Content.ReadAsStreamAsync(_cts.Token);
                 using var reader = new StreamReader(stream);
 
+                string eventData = string.Empty;
+                string eventName = string.Empty;
+
                 while (!reader.EndOfStream && !_cts.IsCancellationRequested) {
                     string? line = await reader.ReadLineAsync();
-                    if (line != null && line.StartsWith("event:")) {
-                        string eventName = line.Substring(6).Trim();
-                        string? dataLine = await reader.ReadLineAsync();
-                        if (dataLine != null && dataLine.StartsWith("data:")) {
-                            string data = dataLine.Substring(5).Trim();
-                            HandleEvent(eventName, data);
+                    if (line != null) {
+                        if (line.StartsWith("event:")) {
+                            eventName = line.Substring(6).Trim();
+                            eventData = string.Empty; // reset for next event
+                        } else if (line.StartsWith("data:")) {
+                            eventData += line.Substring(5).Trim() + "\n"; // save all lines
+                        } else if (string.IsNullOrWhiteSpace(line) && !string.IsNullOrEmpty(eventData)) {
+                            // empty line means end of event
+                            await HandleEvent(eventName, eventData.Trim());
+                            eventData = string.Empty;
                         }
                     }
                 }
@@ -70,7 +79,8 @@ public class StreamerNotificationService : DiscordBotService {
                 break;
             } catch (Exception ex) {
                 attempts++;
-                Logger.LogError(ex, "Error during SSE listener Attempt {Attempt} of {MaxAttempts}", attempts, RECONNECT_ATTEMPTS);
+                Logger.LogError(ex, "Error during SSE listener Attempt {Attempt} of {MaxAttempts}", attempts,
+                    RECONNECT_ATTEMPTS);
 
                 if (attempts < RECONNECT_ATTEMPTS) {
                     await Task.Delay(RECONNECT_DELAY_MS, _cts.Token);
@@ -85,23 +95,46 @@ public class StreamerNotificationService : DiscordBotService {
         }
     }
 
-    void HandleEvent(string eventName, string data) {
+    async Task HandleEvent(string eventName, string data) {
         if (eventName == "streamer") {
             Logger.LogInformation("New streamer detected: {StreamerData}", data);
-            SendDiscordMessage(data);
+
+            string djName = ExtractDjName(data);
+            string? imageUrl = ExtractImageUrl(data);
+
+            await SendDiscordMessage(djName, imageUrl);
         }
     }
 
-    async void SendDiscordMessage(string streamerData) {
+    async Task SendDiscordMessage(string djName, string? imageUrl) {
         try {
             var embed = new LocalEmbed()
                 .WithTitle("Évènement détecté")
-                .WithDescription($"Nouveau streamer en direct : {streamerData}")
+                .WithDescription($"Nouveau streamer en direct : {djName}")
                 .WithColor(Color.Orange);
+
+            if (!string.IsNullOrWhiteSpace(imageUrl)) {
+                embed.WithImageUrl(imageUrl);
+            }
+
             await Bot.SendMessageAsync(CHANNEL_ID, new LocalMessage().WithEmbeds(embed));
         } catch (Exception ex) {
             Logger.LogError(ex, "Error sending streamer notification to Discord");
         }
+    }
+
+    string ExtractDjName(string data) {
+        Match djNameMatch = Regex.Match(data, @"<div id=""dj-name""[^>]*>(.+?)</div>");
+        return djNameMatch.Success ? djNameMatch.Groups[1].Value : "DJ inconnu";
+    }
+
+    string? ExtractImageUrl(string data) {
+        Match imageMatch = Regex.Match(data, @"<img src=""(/api/dj-image/[^""]+)""");
+        if (imageMatch.Success) {
+            return $"{BASE_URL}{imageMatch.Groups[1].Value}";
+        }
+
+        return null;
     }
 
     async Task StopListening() {
