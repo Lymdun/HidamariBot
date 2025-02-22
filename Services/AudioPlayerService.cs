@@ -21,8 +21,8 @@ public class AudioPlayerService : DiscordBotService {
     const string RADIO_URL = "https://stream.r-a-d.io/main.mp3";
     const string RADIO_API_URL = "https://r-a-d.io/api";
 
-    const int RECONNECT_ATTEMPTS = 3;
-    const int RECONNECT_DELAY_MS = 5000;
+    const int RECONNECT_ATTEMPTS = 5;
+    const int RECONNECT_DELAY_MS = 2500;
     const int BUFFER_SIZE = 1024 * 1024; // 1MB buffer
 
     public async Task<IResult> PlayRadio(Snowflake guildId, Snowflake channelId) {
@@ -71,7 +71,11 @@ public class AudioPlayerService : DiscordBotService {
 
                 attempts = 0; // reset attempts on successful playback
             } catch (OperationCanceledException) {
+                Logger.LogInformation("Radio playback cancelled for guild {GuildId}", guildId);
                 break;
+            } catch (HttpRequestException ex) {
+                Logger.LogWarning(ex, "Network error during radio playback. Attempt {Attempt}", attempts);
+                await Task.Delay(RECONNECT_DELAY_MS, _cts.Token);
             } catch (Exception ex) {
                 attempts++;
                 Logger.LogError(ex, "Error during radio playback. Attempt {Attempt} of {MaxAttempts}", attempts,
@@ -81,6 +85,10 @@ public class AudioPlayerService : DiscordBotService {
                     await Task.Delay(RECONNECT_DELAY_MS, _cts.Token);
                 }
             }
+        }
+
+        if (_cts == null) {
+            Logger.LogWarning("Cancellation token for guild {GuildId} is null", guildId);
         }
 
         if (attempts >= RECONNECT_ATTEMPTS) {
@@ -165,9 +173,11 @@ public class AudioPlayerService : DiscordBotService {
         await _semaphore.WaitAsync();
 
         try {
-            _cts?.Cancel();
-            _cts?.Dispose();
-            _cts = null;
+            if (_cts != null) {
+                await _cts.CancelAsync();
+                _cts.Dispose();
+                _cts = null;
+            }
 
             if (_audioPlayer != null) {
                 _audioPlayer.Stop();
