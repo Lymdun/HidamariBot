@@ -12,6 +12,7 @@ public class StreamerNotificationService : DiscordBotService {
     readonly SemaphoreSlim _semaphore = new(1, 1);
     HttpClient? _httpClient;
     CancellationTokenSource? _cts;
+    string _lastDjName = string.Empty;
 
     const ulong CHANNEL_ID = 853043236921671680;
 
@@ -100,9 +101,12 @@ public class StreamerNotificationService : DiscordBotService {
             Logger.LogInformation("New streamer detected: {StreamerData}", data);
 
             string djName = ExtractDjName(data);
-            string? imageUrl = ExtractImageUrl(data);
+            if (djName != _lastDjName) {
+                _lastDjName = djName;
 
-            await SendDiscordMessage(djName, imageUrl);
+                string? imageUrl = ExtractImageUrl(data);
+                await SendDiscordMessage(djName, imageUrl);
+            }
         }
     }
 
