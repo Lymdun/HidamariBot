@@ -14,7 +14,7 @@ public class StreamerNotificationService : DiscordBotService {
     CancellationTokenSource? _cts;
     string _lastDjName = string.Empty;
 
-    const ulong CHANNEL_ID = 853043236921671680;
+    const ulong CHANNEL_ID = 481723797498757120;
 
     const string BASE_URL = "https://r-a-d.io";
     const string SSE_URL = "https://r-a-d.io/v1/sse";
