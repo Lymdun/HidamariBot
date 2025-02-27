@@ -21,24 +21,27 @@ public class StreamerNotificationService : DiscordBotService {
     const int RECONNECT_ATTEMPTS = 5;
     const int RECONNECT_DELAY_MS = 1500;
 
-    public async Task<IResult> StartListening() {
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+        await StartListening();
+    }
+
+    async Task StartListening() {
+        Logger.LogInformation("Starting SSE listener..");
+
         try {
             await _semaphore.WaitAsync();
 
             if (_cts != null) {
                 Logger.LogWarning("SSE listener already running");
-                return Results.Failure("Un écouteur SSE est déjà en cours pour ce serveur.");
+                return;
             }
 
             _cts = new CancellationTokenSource();
             _httpClient = new HttpClient();
 
             _ = ListenForEventsWithReconnectionAsync();
-
-            return Results.Success;
         } catch (Exception ex) {
             Logger.LogError(ex, "Error while trying to start SSE listener");
-            return Results.Failure("Une erreur est survenue lors du démarrage de l'écouteur SSE.");
         } finally {
             _semaphore.Release();
         }
