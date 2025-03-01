@@ -11,7 +11,6 @@ namespace HidamariBot.Services;
 public class StreamerNotificationService : DiscordBotService {
     readonly SemaphoreSlim _semaphore = new(1, 1);
     HttpClient? _httpClient;
-    CancellationTokenSource? _cts;
     string _lastDjName = string.Empty;
 
     const ulong CHANNEL_ID = 481723797498757120;
@@ -22,24 +21,23 @@ public class StreamerNotificationService : DiscordBotService {
     const int RECONNECT_DELAY_MS = 1500;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
-        await StartListening();
+        await StartListening(stoppingToken);
     }
 
-    async Task StartListening() {
+    async Task StartListening(CancellationToken cancellationToken) {
         Logger.LogInformation("Starting SSE listener..");
 
         try {
-            await _semaphore.WaitAsync();
+            await _semaphore.WaitAsync(cancellationToken);
 
-            if (_cts != null) {
+            if (_httpClient  != null) {
                 Logger.LogWarning("SSE listener already running");
                 return;
             }
 
-            _cts = new CancellationTokenSource();
             _httpClient = new HttpClient();
 
-            _ = ListenForEventsWithReconnectionAsync();
+            _ = ListenForEventsWithReconnectionAsync(cancellationToken);
         } catch (Exception ex) {
             Logger.LogError(ex, "Error while trying to start SSE listener");
         } finally {
@@ -47,22 +45,22 @@ public class StreamerNotificationService : DiscordBotService {
         }
     }
 
-    async Task ListenForEventsWithReconnectionAsync() {
+    async Task ListenForEventsWithReconnectionAsync(CancellationToken cancellationToken) {
         int attempts = 0;
-        while (_cts != null && !_cts.IsCancellationRequested && attempts < RECONNECT_ATTEMPTS) {
+        while (!cancellationToken.IsCancellationRequested && attempts < RECONNECT_ATTEMPTS) {
             try {
                 using HttpResponseMessage response =
-                    await _httpClient!.GetAsync(SSE_URL, HttpCompletionOption.ResponseHeadersRead, _cts.Token);
+                    await _httpClient!.GetAsync(SSE_URL, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 response.EnsureSuccessStatusCode();
 
-                await using Stream stream = await response.Content.ReadAsStreamAsync(_cts.Token);
+                await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
                 using var reader = new StreamReader(stream);
 
                 string eventData = string.Empty;
                 string eventName = string.Empty;
 
-                while (!reader.EndOfStream && !_cts.IsCancellationRequested) {
-                    string? line = await reader.ReadLineAsync();
+                while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested) {
+                    string? line = await reader.ReadLineAsync(cancellationToken);
                     if (line != null) {
                         if (line.StartsWith("event:")) {
                             eventName = line.Substring(6).Trim();
@@ -87,7 +85,7 @@ public class StreamerNotificationService : DiscordBotService {
                     RECONNECT_ATTEMPTS);
 
                 if (attempts < RECONNECT_ATTEMPTS) {
-                    await Task.Delay(RECONNECT_DELAY_MS, _cts.Token);
+                    await Task.Delay(RECONNECT_DELAY_MS, cancellationToken);
                 }
             }
         }
@@ -148,12 +146,6 @@ public class StreamerNotificationService : DiscordBotService {
         await _semaphore.WaitAsync();
 
         try {
-            if (_cts != null) {
-                await _cts.CancelAsync();
-                _cts.Dispose();
-                _cts = null;
-            }
-
             if (_httpClient != null) {
                 _httpClient.Dispose();
                 _httpClient = null;
