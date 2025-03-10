@@ -161,6 +161,10 @@ public class AudioPlayerService : DiscordBotService {
         if (string.IsNullOrWhiteSpace(threadHtml) || threadHtml.Length < 5)
             return string.Empty;
 
+        if (threadHtml.StartsWith("image:")) {
+            return threadHtml.Substring(6);
+        }
+
         Match match = Regex.Match(threadHtml, @"src=""([^""]+)""");
         if (match.Success && match.Groups.Count > 1) {
             return match.Groups[1].Value;

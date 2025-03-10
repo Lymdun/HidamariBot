@@ -62,6 +62,8 @@ public class StreamerNotificationService : DiscordBotService {
                 while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested) {
                     string? line = await reader.ReadLineAsync(cancellationToken);
                     if (line != null) {
+                        attempts = 0; // Reset attempts on successful connection
+
                         if (line.StartsWith("event:")) {
                             eventName = line.Substring(6).Trim();
                             eventData = string.Empty; // reset for next event
@@ -74,8 +76,6 @@ public class StreamerNotificationService : DiscordBotService {
                         }
                     }
                 }
-
-                attempts = 0; // Reset attempts on successful connection
             } catch (OperationCanceledException) {
                 Logger.LogInformation("SSE listener cancelled");
                 break;
