@@ -23,19 +23,17 @@ public class AudioPlayerService : DiscordBotService {
 
     const int RECONNECT_ATTEMPTS = 5;
     const int RECONNECT_DELAY_MS = 2500;
-    const int BUFFER_SIZE = 1024 * 1024; // 1MB buffer
 
     public async Task<IResult> PlayRadio(Snowflake guildId, Snowflake channelId) {
         try {
             await _semaphore.WaitAsync();
-
             _cts = new CancellationTokenSource();
 
-            VoiceExtension voiceExtension = Bot.GetRequiredExtension<VoiceExtension>();
-            IVoiceConnection voiceConnection = await voiceExtension.ConnectAsync(guildId, channelId, _cts.Token);
+            VoiceExtension voiceExt = Bot.GetRequiredExtension<VoiceExtension>();
+            IVoiceConnection voiceConn = await voiceExt.ConnectAsync(guildId, channelId, _cts.Token);
 
             _httpClient = new HttpClient();
-            _audioPlayer = new AudioPlayer(voiceConnection);
+            _audioPlayer = new AudioPlayer(voiceConn);
 
             _ = PlayRadioWithReconnectionAsync(guildId);
 
@@ -50,49 +48,40 @@ public class AudioPlayerService : DiscordBotService {
 
     async Task PlayRadioWithReconnectionAsync(Snowflake guildId) {
         int attempts = 0;
-        while (_cts != null && !_cts.IsCancellationRequested && attempts < RECONNECT_ATTEMPTS) {
+
+        while (_cts != null
+               && !_cts.IsCancellationRequested
+               && attempts < RECONNECT_ATTEMPTS) {
             try {
-                using HttpResponseMessage response =
-                    await _httpClient!.GetAsync(RADIO_URL, HttpCompletionOption.ResponseHeadersRead, _cts.Token);
-                response.EnsureSuccessStatusCode();
-
-                await using Stream stream = await response.Content.ReadAsStreamAsync(_cts.Token);
-                await using var bufferedStream = new BufferedStream(stream, BUFFER_SIZE);
-
-                var audioSource = new FFmpegAudioSource(bufferedStream);
+                var audioSource = new FFmpegAudioSource(RADIO_URL);
 
                 if (_audioPlayer!.TrySetSource(audioSource)) {
                     _audioPlayer.Start();
 
-                    while (_audioPlayer.IsPlaying && !_cts.Token.IsCancellationRequested) {
-                        await Task.Delay(1000, _cts.Token);
+                    while (_audioPlayer.IsPlaying
+                           && !_cts.Token.IsCancellationRequested) {
+                        await Task.Delay(200, _cts.Token);
                     }
                 }
 
-                attempts = 0; // reset attempts on successful playback
+                attempts = 0;
             } catch (OperationCanceledException) {
                 Logger.LogInformation("Radio playback cancelled for guild {GuildId}", guildId);
                 break;
-            } catch (HttpRequestException ex) {
-                Logger.LogWarning(ex, "Network error during radio playback. Attempt {Attempt}", attempts);
-                await Task.Delay(RECONNECT_DELAY_MS, _cts.Token);
             } catch (Exception ex) {
                 attempts++;
-                Logger.LogError(ex, "Error during radio playback. Attempt {Attempt} of {MaxAttempts}", attempts,
-                    RECONNECT_ATTEMPTS);
+                Logger.LogError(ex,
+                    "Error during radio playback. Attempt {Attempt} of {MaxAttempts}",
+                    attempts, RECONNECT_ATTEMPTS);
 
-                if (attempts < RECONNECT_ATTEMPTS) {
+                if (attempts < RECONNECT_ATTEMPTS)
                     await Task.Delay(RECONNECT_DELAY_MS, _cts.Token);
-                }
             }
         }
 
-        if (_cts == null) {
-            Logger.LogWarning("Cancellation token for guild {GuildId} is null", guildId);
-        }
-
         if (attempts >= RECONNECT_ATTEMPTS) {
-            Logger.LogWarning("Max reconnection attempts reached for guild {GuildId}. Stopping radio", guildId);
+            Logger.LogWarning(
+                "Max reconnection attempts reached for guild {GuildId}. Stopping radio", guildId);
             await StopRadio(guildId);
         }
     }
@@ -160,6 +149,10 @@ public class AudioPlayerService : DiscordBotService {
     string ExtractThreadImageUrl(string? threadHtml) {
         if (string.IsNullOrWhiteSpace(threadHtml) || threadHtml.Length < 5)
             return string.Empty;
+
+        if (threadHtml.StartsWith("image:")) {
+            return threadHtml.Substring(6);
+        }
 
         Match match = Regex.Match(threadHtml, @"src=""([^""]+)""");
         if (match.Success && match.Groups.Count > 1) {

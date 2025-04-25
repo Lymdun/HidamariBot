@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace HidamariBot.Services;
 
 public class SchedulerService : DiscordBotService {
-    const ulong CHANNEL_ID = 1280888903393607820;
+    const ulong CHANNEL_ID = 1363662419628654682;
     static readonly TimeZoneInfo frenchTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Romance Standard Time");
 
     const string CRON_EXPRESSION = "0 12 * * MON,TUE";
