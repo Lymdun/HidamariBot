@@ -17,7 +17,6 @@ public class StreamerNotificationService : DiscordBotService {
 
     const string BASE_URL = "https://r-a-d.io";
     const string SSE_URL = "https://r-a-d.io/v1/sse";
-    const int RECONNECT_ATTEMPTS = 5;
     const int RECONNECT_DELAY_MS = 1500;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -46,8 +45,7 @@ public class StreamerNotificationService : DiscordBotService {
     }
 
     async Task ListenForEventsWithReconnectionAsync(CancellationToken cancellationToken) {
-        int attempts = 0;
-        while (!cancellationToken.IsCancellationRequested && attempts < RECONNECT_ATTEMPTS) {
+        while (!cancellationToken.IsCancellationRequested) {
             try {
                 using HttpResponseMessage response =
                     await _httpClient!.GetAsync(SSE_URL, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
@@ -62,8 +60,6 @@ public class StreamerNotificationService : DiscordBotService {
                 while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested) {
                     string? line = await reader.ReadLineAsync(cancellationToken);
                     if (line != null) {
-                        attempts = 0; // Reset attempts on successful connection
-
                         if (line.StartsWith("event:")) {
                             eventName = line.Substring(6).Trim();
                             eventData = string.Empty; // reset for next event
@@ -80,21 +76,12 @@ public class StreamerNotificationService : DiscordBotService {
                 Logger.LogInformation("SSE listener cancelled");
                 break;
             } catch (Exception ex) {
-                attempts++;
-                Logger.LogError(ex, "Error during SSE listener Attempt {Attempt} of {MaxAttempts}", attempts,
-                    RECONNECT_ATTEMPTS);
-
-                if (attempts < RECONNECT_ATTEMPTS) {
-                    await Task.Delay(RECONNECT_DELAY_MS, cancellationToken);
-                }
+                Logger.LogError(ex, "Error during SSE listener");
+                await Task.Delay(RECONNECT_DELAY_MS, cancellationToken);
             }
         }
 
-        if (attempts >= RECONNECT_ATTEMPTS) {
-            Logger.LogWarning(
-                "Max reconnection attempts reached for SSE listener. Stopping listener");
-            await StopListening();
-        }
+        await StopListening();
     }
 
     async Task HandleEvent(string eventName, string data) {
