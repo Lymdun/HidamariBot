@@ -7,7 +7,7 @@ namespace HidamariBot.Audio;
 // Represents an audio source implementation that uses FFmpeg to produce
 // the Opus audio packets. The input stream can be any format
 // that FFmpeg is able to convert (virtually anything).
-public class FFmpegAudioSource : AudioSource {
+public class FFmpegAudioSource : IAudioSource {
     readonly string _url;
 
     // The path to the FFmpeg executable.
@@ -62,7 +62,7 @@ public class FFmpegAudioSource : AudioSource {
         arguments.Add("pipe:1");
     }
 
-    public override async IAsyncEnumerator<Memory<byte>> GetAsyncEnumerator(CancellationToken cancellationToken) {
+    public async IAsyncEnumerator<ReadOnlyMemory<byte>> GetAsyncEnumerator(CancellationToken cancellationToken = default) {
         var startInfo = new ProcessStartInfo {
             FileName = FFmpegPath, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false
         };
@@ -73,7 +73,7 @@ public class FFmpegAudioSource : AudioSource {
         try {
             var ogg = new OggStreamAudioSource(ffmpeg.StandardOutput.BaseStream);
 
-            await foreach (Memory<byte> packet in ogg.WithCancellation(cancellationToken))
+            await foreach (ReadOnlyMemory<byte> packet in ogg.WithCancellation(cancellationToken))
                 yield return packet;
 
             if (ffmpeg.ExitCode != 0) {
